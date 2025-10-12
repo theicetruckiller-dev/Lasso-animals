@@ -1,0 +1,166 @@
+--================================================================
+-- Lasso Animals - Otomatik Market & Hız Script'i
+--================================================================
+
+-- Mobil uyumlu GUI kütüphanesini yüklüyoruz
+local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))()
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Global değişkenlerimizi tanımlıyoruz
+_G.AutoBuyTreats = false
+_G.WalkSpeed = 16 -- Varsayılan hız
+
+--================================================================
+-- ANA GUI PENCERESİ
+--================================================================
+
+local Window = OrionLib:MakeWindow({
+    Name = "Lasso Animals Helper",
+    HidePremium = true,
+    SaveConfig = true,
+    ConfigFolder = "LassoAnimalsConfig"
+})
+
+local MainTab = Window:MakeTab({
+    Name = "Ana Kontroller",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+--================================================================
+-- GUI KONTROLLERİ
+--================================================================
+
+-- Otomatik meyve almayı açıp kapatacak buton
+MainTab:AddToggle({
+    Name = "Otomatik Meyve Alma",
+    Callback = function(Value)
+        _G.AutoBuyTreats = Value
+        print("Otomatik Meyve Alma: " .. (Value and "AÇIK" or "KAPALI"))
+    end
+})
+
+-- Hız ayarı için kaydırma çubuğu (slider)
+MainTab:AddSlider({
+    Name = "Yürüme Hızı",
+    Min = 16,
+    Max = 150,
+    Default = 16,
+    Color = Color3.fromRGB(255, 255, 255),
+    Increment = 1,
+    ValueName = "Speed",
+    Callback = function(Value)
+        _G.WalkSpeed = Value
+    end
+})
+
+-- Hızı varsayılana döndürecek buton
+MainTab:AddButton({
+    Name = "Hızı Sıfırla",
+    Callback = function()
+        _G.WalkSpeed = 16
+        OrionLib:MakeNotification({
+            Name = "Hız Sıfırlandı!",
+            Content = "Yürüme hızın normale döndü.",
+            Image = "rbxassetid://4483345998",
+            Time = 3
+        })
+    end
+})
+
+--================================================================
+-- GUI'Yİ GİZLEME/GÖSTERME BUTONU (MANUEL)
+--================================================================
+
+local-ToggleGui = Instance.new("ScreenGui")
+ToggleGui.Name = "ToggleGui"
+ToggleGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+ToggleGui.ResetOnSpawn = false
+
+local-ToggleButton = Instance.new("TextButton")
+ToggleButton.Text = "Gizle/Göster"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ToggleButton.BackgroundTransparency = 0.4
+ToggleButton.Size = UDim2.new(0, 100, 0, 30)
+ToggleButton.Position = UDim2.new(0, 10, 0.4, 0) -- Ekranın sol ortası
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 14
+ToggleButton.Draggable = true
+ToggleButton.Active = true
+ToggleButton.Parent = ToggleGui
+
+local-UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = ToggleButton
+
+-- Bu butona tıklandığında Orion arayüzünü gizler/gösterir
+ToggleButton.MouseButton1Click:Connect(function()
+    OrionLib.Enabled = not OrionLib.Enabled
+end)
+
+
+--================================================================
+-- ANA SCRİPT MANTIĞI
+--================================================================
+
+-- Hız değiştirme döngüsü
+task.spawn(function()
+    while task.wait(0.2) do
+        pcall(function()
+            if Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+                Players.LocalPlayer.Character.Humanoid.WalkSpeed = _G.WalkSpeed
+            end
+        end)
+    end
+end)
+
+-- Satın alınacak meyvelerin listesi
+local fruitsToBuy = {
+    "Carrot",
+    "Apple",
+    "Corn",
+    "Pepper",
+    "Banana",
+    "Cherries"
+[span_0](start_span)}
+
+-- Event'leri güvenli bir şekilde bekliyoruz
+local RemoteEvents = ReplicatedStorage:WaitForChild("Remote_Events")
+local RestockEvent = RemoteEvents:WaitForChild("NOT") -- Restock event'i[span_0](end_span)
+[span_1](start_span)local BuyTreatEvent = RemoteEvents:WaitForChild("Buy_Treat") -- Satın alma event'i[span_1](end_span)
+
+-- Restock eventi tetiklendiğinde çalışacak fonksiyon
+RestockEvent.OnClientEvent:Connect(function(message)
+    -- Gelen mesajın restock mesajı olduğunu doğruluyoruz
+    [span_2](start_span)if message == "The treat shop has been restocked!" then[span_2](end_span)
+        print("Market yenilendi, kontrol ediliyor...")
+        
+        -- Eğer otomatik satın alma açıksa, işlemi başlat
+        if _G.AutoBuyTreats then
+            print("Otomatik satın alma aktif. Meyveler alınıyor...")
+            
+            -- Listede dönüp tüm meyveleri satın al
+            for _, fruitName in ipairs(fruitsToBuy) do
+                pcall(function()
+                    [span_3](start_span)BuyTreatEvent:FireServer(fruitName)[span_3](end_span)
+                    print(fruitName .. " satın alındı.")
+                end)
+                task.wait(0.2) -- Sunucuyu yormamak için küçük bir bekleme
+            end
+            
+            OrionLib:MakeNotification({
+                Name = "Market Tamamlandı!",
+                Content = "Tüm meyveler otomatik olarak alındı.",
+                Image = "rbxassetid://4483345998",
+                Time = 5
+            })
+        else
+            print("Otomatik satın alma kapalı, işlem yapılmadı.")
+        end
+    end
+end)
+
+print("Lasso Animals Script'i başarıyla yüklendi.")
+
